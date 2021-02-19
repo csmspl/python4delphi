@@ -46,3 +46,6 @@
 *.Patch
 *.#00
 *.pch
+Tests/TestInsightSettings.ini
+Tests/Win32
+Tests/Win64
