@@ -2613,8 +2613,8 @@ type
     ////////////////
 
     // Basic services
-    function  GetAttr(key : PAnsiChar) : PPyObject; override;
-    function  SetAttr(key : PAnsiChar; value : PPyObject) : Integer; override;
+    function  GetAttrO( key: PPyObject) : PPyObject; override;
+    function  SetAttrO( key, value: PPyObject) : Integer; override;
     function  Repr : PPyObject; override;
 
     // Class methods
@@ -2696,7 +2696,7 @@ procedure FreeSubtypeInst(ob:PPyObject); cdecl;
 procedure Register;
 function  PyType_HasFeature(AType : PPyTypeObject; AFlag : Integer) : Boolean;
 function  SysVersionFromDLLName(const DLLFileName : string): string;
-procedure PythonVersionFromDLLName(const LibName: string; out MajorVersion, MinorVersion: integer);
+procedure PythonVersionFromDLLName(LibName: string; out MajorVersion, MinorVersion: integer);
 
 { Helper functions}
 (*
@@ -7391,7 +7391,7 @@ end;
 constructor TTypeServices.Create;
 begin
   inherited;
-  FBasic := [bsGetAttr, bsSetAttr, bsRepr, bsStr];
+  FBasic := [bsGetAttrO, bsSetAttrO, bsRepr, bsStr];
 end;
 
 procedure TTypeServices.AssignTo( Dest: TPersistent );
@@ -8439,26 +8439,26 @@ end;
 
 // Then we override the needed services
 
-function  TPyVar.GetAttr(key : PAnsiChar) : PPyObject;
+function  TPyVar.GetAttrO( key: PPyObject) : PPyObject;
 begin
   with GetPythonEngine do
     begin
-      if CompareText( string(key), 'Value') = 0 then
+      if CompareText( PyObjectAsString(key), 'Value') = 0 then
         Result := GetValue
       else
-        Result := inherited GetAttr(key);
+        Result := inherited GetAttrO(key);
     end;
 end;
 
-function  TPyVar.SetAttr(key : PAnsiChar; value : PPyObject) : Integer;
+function  TPyVar.SetAttrO( key, value: PPyObject) : Integer;
 begin
   Result := 0;
   with GetPythonEngine do
     begin
-      if CompareText( string(key), 'Value' ) = 0 then
+      if CompareText( PyObjectAsString(key), 'Value' ) = 0 then
         SetValue( value )
       else
-        Result := inherited SetAttr(key, value);
+        Result := inherited SetAttrO(key, value);
     end;
 end;
 
@@ -9006,27 +9006,54 @@ begin
 end;
 {$ENDIF}
 
-procedure PythonVersionFromDLLName(const LibName: string; out MajorVersion, MinorVersion: integer);
+procedure PythonVersionFromDLLName(LibName: string; out MajorVersion, MinorVersion: integer);
+//Windows: 'c:\some\path\python310.dll'
+//Linux: '/some/path/libpython3.10m.so'
+const
+  cPython = 'python';
+  DefaultMajor = 3;
+  DefaultMinor = 4;
 var
   NPos: integer;
-  S: String;
+  ch: char;
 begin
-  //Win: "python310.dll"
-  //Linux: "libpython3.10.so"
-  S := LibName;
-  NPos := Pos('python', LowerCase(S));
-  if NPos>0 then
-  begin
-    Inc(NPos, Length('python'));
-    MajorVersion := StrToIntDef(S[NPos], 3);
-    Inc(NPos);
-    if LibName[NPos]='.' then
-      Inc(NPos);
-    S := Copy(S, NPos);
-    NPos := Pos('.', S);
-    if NPos > 1 then
-      MinorVersion := StrToIntDef(Copy(S, 1, NPos-1), 3);
+  MajorVersion:= DefaultMajor;
+  MinorVersion:= DefaultMinor;
+  LibName:= LowerCase(ExtractFileName(LibName)); //strip path
+  NPos:= Pos(cPython, LibName);
+  if NPos=0 then exit;
+  Inc(NPos, Length(cPython));
+  if NPos>Length(LibName) then exit;
+  ch:= LibName[NPos];
+  case ch of
+    '2'..'5': //support major versions 2...5
+      MajorVersion:= StrToIntDef(ch, DefaultMajor);
+    else
+      exit;
   end;
+  Delete(LibName, 1, NPos);
+  if LibName='' then exit;
+  case LibName[1] of
+    '.': //Unix name with dot
+      Delete(LibName, 1, 1);
+    '0'..'9': //Windows name w/o dot
+      begin end;
+    else //unknown char after major version
+      exit;
+  end;
+  //strip file extension and handle 'libpython3.10m.so'
+  for NPos:= 1 to Length(LibName) do
+  begin
+    case LibName[NPos] of
+      '.', 'a'..'z':
+        begin
+          SetLength(LibName, NPos-1);
+          Break
+        end;
+    end;
+  end;
+  //the rest is minor version number '0'...'999'
+  MinorVersion:= StrToIntDef(LibName, DefaultMinor);
 end;
 
 
