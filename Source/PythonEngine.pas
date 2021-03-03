@@ -180,7 +180,16 @@ const
 type
   // Delphi equivalent used by TPyObject
   TRichComparisonOpcode = (pyLT, pyLE, pyEQ, pyNE, pyGT, pyGE);
-const
+
+{$IFDEF MSWINDOWS}
+  C_Long = Integer;
+  C_ULong = Cardinal;
+{$ELSE}
+  C_Long= NativeInt;
+  C_ULong = NativeUInt;
+{$ENDIF}
+
+  const
 {
 Type flags (tp_flags)
 
@@ -202,42 +211,42 @@ given type object has a specified feature.
 }
 
 // Set if the type object is dynamically allocated
-  Py_TPFLAGS_HEAPTYPE = (1 shl 9);
+  Py_TPFLAGS_HEAPTYPE = (C_ULong(1) shl 9);
 
 // Set if the type allows subclassing
-  Py_TPFLAGS_BASETYPE = (1 shl 10);
+  Py_TPFLAGS_BASETYPE = (C_ULong(1) shl 10);
 
 // Set if the type is 'ready' -- fully initialized
-  Py_TPFLAGS_READY = (1 shl 12);
+  Py_TPFLAGS_READY = (C_ULong(1) shl 12);
 
 // Set while the type is being 'readied', to prevent recursive ready calls
-  Py_TPFLAGS_READYING = (1 shl 13);
+  Py_TPFLAGS_READYING = (C_ULong(1) shl 13);
 
 // Objects support garbage collection (see objimp.h)
-  Py_TPFLAGS_HAVE_GC = (1 shl 14);
+  Py_TPFLAGS_HAVE_GC = (C_ULong(1) shl 14);
 
 // Set if the type implements the vectorcall protocol (PEP 590) */
-  _Py_TPFLAGS_HAVE_VECTORCALL = (1 shl 11);
+  _Py_TPFLAGS_HAVE_VECTORCALL = (C_ULong(1) shl 11);
 
 // Objects behave like an unbound method
-  Py_TPFLAGS_METHOD_DESCRIPTOR = (1 shl 17);
+  Py_TPFLAGS_METHOD_DESCRIPTOR = (C_ULong(1) shl 17);
 
 // Objects support type attribute cache
-  Py_TPFLAGS_HAVE_VERSION_TAG = (1 shl 18);
-  Py_TPFLAGS_VALID_VERSION_TAG = (1 shl 19);
+  Py_TPFLAGS_HAVE_VERSION_TAG = (C_ULong(1) shl 18);
+  Py_TPFLAGS_VALID_VERSION_TAG = (C_ULong(1) shl 19);
 
 // Type is abstract and cannot be instantiated
-  Py_TPFLAGS_IS_ABSTRACT = (1 shl 20);
+  Py_TPFLAGS_IS_ABSTRACT = (C_ULong(1) shl 20);
 
 // These flags are used to determine if a type is a subclass.
-  Py_TPFLAGS_LONG_SUBCLASS       = (1 shl 24);
-  Py_TPFLAGS_LIST_SUBCLASS       = (1 shl 25);
-  Py_TPFLAGS_TUPLE_SUBCLASS      = (1 shl 26);
-  Py_TPFLAGS_BYTES_SUBCLASS      = (1 shl 27);
-  Py_TPFLAGS_UNICODE_SUBCLASS    = (1 shl 28);
-  Py_TPFLAGS_DICT_SUBCLASS       = (1 shl 29);
-  Py_TPFLAGS_BASE_EXC_SUBCLASS   = (1 shl 30);
-  Py_TPFLAGS_TYPE_SUBCLASS       = (1 shl 31);
+  Py_TPFLAGS_LONG_SUBCLASS       = (C_ULong(1) shl 24);
+  Py_TPFLAGS_LIST_SUBCLASS       = (C_ULong(1) shl 25);
+  Py_TPFLAGS_TUPLE_SUBCLASS      = (C_ULong(1) shl 26);
+  Py_TPFLAGS_BYTES_SUBCLASS      = (C_ULong(1) shl 27);
+  Py_TPFLAGS_UNICODE_SUBCLASS    = (C_ULong(1) shl 28);
+  Py_TPFLAGS_DICT_SUBCLASS       = (C_ULong(1) shl 29);
+  Py_TPFLAGS_BASE_EXC_SUBCLASS   = (C_ULong(1) shl 30);
+  Py_TPFLAGS_TYPE_SUBCLASS       = (C_ULong(1) shl 31);
 
   Py_TPFLAGS_DEFAULT  = Py_TPFLAGS_BASETYPE or Py_TPFLAGS_HAVE_VERSION_TAG;
 
@@ -339,7 +348,6 @@ type
   PPyObject	    = ^PyObject;
   PPPyObject	    = ^PPyObject;
   PPPPyObject	    = ^PPPyObject;
-  PPyIntObject	    = ^PyIntObject;
   PPyTypeObject     = ^PyTypeObject;
   PPySliceObject    = ^PySliceObject;
 
@@ -448,12 +456,6 @@ type
   PyObject = {$IFNDEF CPUX64}packed{$ENDIF} record
     ob_refcnt: NativeInt;
     ob_type:   PPyTypeObject;
-  end;
-
-  PyIntObject = {$IFNDEF CPUX64}packed{$ENDIF} record
-    ob_refcnt : NativeInt;
-    ob_type   : PPyTypeObject;
-    ob_ival   : LongInt;
   end;
 
   _frozen = {$IFNDEF CPUX64}packed{$ENDIF} record
@@ -641,7 +643,7 @@ type
     // Functions to access object as input/output buffer
     tp_as_buffer:   Pointer; // PPyBufferProcs - not implemented
     // Flags to define presence of optional/expanded features
-    tp_flags:       LongInt;
+    tp_flags:       C_ULong;
 
     tp_doc:         PAnsiChar; // Documentation string
 
@@ -1233,8 +1235,8 @@ type
 
     Py_None:            PPyObject;
     Py_Ellipsis:        PPyObject;
-    Py_False:           PPyIntObject;
-    Py_True:            PPyIntObject;
+    Py_False:           PPyObject;
+    Py_True:            PPyObject;
     Py_NotImplemented:  PPyObject;
 
     PyExc_AttributeError: PPPyObject;
@@ -1332,7 +1334,7 @@ type
     PyErr_BadInternalCall: procedure; cdecl;
     PyErr_CheckSignals: function: integer; cdecl;
     PyErr_Clear:        procedure; cdecl;
-    PyErr_Fetch:        procedure( errtype, errvalue, errtraceback: PPPyObject); cdecl;
+    PyErr_Fetch:        procedure(out errtype, errvalue, errtraceback: PPyObject); cdecl;
     PyErr_NoMemory:     function: PPyObject; cdecl;
     PyErr_Occurred:     function: PPyObject; cdecl;
     PyErr_Print:        procedure; cdecl;
@@ -1401,7 +1403,7 @@ type
     PyFunction_GetGlobals:function (ob:PPyObject):PPyObject; cdecl;
     PyFunction_New:function (ob1,ob2:PPyObject):PPyObject; cdecl;
     PyImport_AddModule:function (name:PAnsiChar):PPyObject; cdecl;
-    PyImport_GetMagicNumber:function :LongInt; cdecl;
+    PyImport_GetMagicNumber:function :C_Long; cdecl;
     PyImport_ImportFrozenModule:function (key:PAnsiChar):integer; cdecl;
     PyImport_ImportModule:function (name:PAnsiChar):PPyObject; cdecl;
     PyImport_Import:function (name:PPyObject):PPyObject; cdecl;
@@ -1418,12 +1420,12 @@ type
     PyList_Size:function (ob:PPyObject):NativeInt; cdecl;
     PyList_Sort:function (ob:PPyObject):integer; cdecl;
     PyLong_AsDouble:function (ob:PPyObject):DOUBLE; cdecl;
-    PyLong_AsLong:function (ob:PPyObject):LongInt; cdecl;
+    PyLong_AsLong:function (ob:PPyObject):C_Long; cdecl;
     PyLong_FromDouble:function (db:double):PPyObject; cdecl;
-    PyLong_FromLong:function (l:LongInt):PPyObject; cdecl;
+    PyLong_FromLong:function (l:C_Long):PPyObject; cdecl;
     PyLong_FromString:function (pc:PAnsiChar;var ppc:PAnsiChar;i:integer):PPyObject; cdecl;
-    PyLong_FromUnsignedLong:function(val:LongWord): PPyObject; cdecl;
-    PyLong_AsUnsignedLong:function(ob:PPyObject): LongWord; cdecl;
+    PyLong_FromUnsignedLong:function(val:C_ULong): PPyObject; cdecl;
+    PyLong_AsUnsignedLong:function(ob:PPyObject): C_ULong; cdecl;
     PyLong_FromUnicodeObject:function(ob:PPyObject; base : integer): PPyObject; cdecl;
     PyLong_FromLongLong:function(val:Int64): PPyObject; cdecl;
     PyLong_FromUnsignedLongLong:function(val:UInt64) : PPyObject; cdecl;
@@ -1553,7 +1555,7 @@ type
     PyWeakref_NewRef: function ( ob, callback : PPyObject) : PPyObject; cdecl;
     PyWrapper_New: function ( ob1, ob2 : PPyObject) : PPyObject; cdecl;
     PyBool_FromLong: function ( ok : Integer) : PPyObject; cdecl;
-    PyThreadState_SetAsyncExc: function(t_id :LongInt; exc :PPyObject) : Integer; cdecl;
+    PyThreadState_SetAsyncExc: function(t_id:C_ULong; exc:PPyObject) : Integer; cdecl;
     Py_AtExit:function (proc: AtExitProc):integer; cdecl;
     Py_CompileStringExFlags:function (str,filename:PAnsiChar;start:integer;flags:PPyCompilerFlags;optimize:integer):PPyObject; cdecl;
     Py_FatalError:procedure(s:PAnsiChar); cdecl;
@@ -1730,7 +1732,8 @@ type
       destructor Destroy; override;
 
       procedure Clear;
-      procedure Refresh;
+      procedure Refresh(pytraceback: PPyObject = nil);
+      procedure AddItem(const Context, FileName: string; LineNo: Integer);
 
       property ItemCount : Integer read GetItemCount;
       property Items[ idx : Integer ] : TTracebackItem read GetItem;
@@ -1748,7 +1751,6 @@ type
     FRedirectIO:                 Boolean;
     FOnAfterInit:                TNotifyEvent;
     FClients:                    TList;
-    FLock:                       TCriticalSection;
     FExecModule:                 AnsiString;
     FAutoFinalize:               Boolean;
     FProgramName:                UnicodeString;
@@ -1774,6 +1776,8 @@ type
     FPyDateTime_DateTimeTZType:  PPyObject;
 
   protected
+    procedure  Initialize;
+    procedure  Finalize;
     procedure AfterLoad; override;
     procedure BeforeLoad; override;
     procedure DoOpenDll(const aDllName : string); override;
@@ -1791,6 +1795,7 @@ type
     procedure SetGlobalVars(const Value: PPyObject);
     procedure SetLocalVars(const Value: PPyObject);
     procedure SetPyFlags(const Value: TPythonFlags);
+    procedure SetIO(InputOutput: TPythonInputOutput);
     procedure AssignPyFlags;
 
   public
@@ -1799,10 +1804,6 @@ type
     destructor  Destroy; override;
 
     // Public methods
-    procedure  Initialize;
-    procedure  Finalize;
-    procedure  Lock;
-    procedure  Unlock;
     procedure  SetPythonHome(const PythonHome: UnicodeString);
     procedure  SetProgramName(const ProgramName: UnicodeString);
     function   IsType(ob: PPyObject; obt: PPyTypeObject): Boolean;
@@ -1896,7 +1897,7 @@ type
     property DatetimeConversionMode: TDatetimeConversionMode read FDatetimeConversionMode write FDatetimeConversionMode default DEFAULT_DATETIME_CONVERSION_MODE;
     property InitScript: TStrings read FInitScript write SetInitScript;
     property InitThreads: Boolean read FInitThreads write SetInitThreads default False;
-    property IO: TPythonInputOutput read FIO write FIO;
+    property IO: TPythonInputOutput read FIO write SetIO;
     property PyFlags: TPythonFlags read FPyFlags write SetPyFlags default [];
     property RedirectIO: Boolean read FRedirectIO write FRedirectIO default True;
     property UseWindowsConsole: Boolean read FUseWindowsConsole write FUseWindowsConsole default False;
@@ -2497,7 +2498,7 @@ type
       function  CreateMethod( pSelf, args : PPyObject ) : PPyObject; cdecl;
       procedure InitServices;
       procedure SetDocString( value : TStringList );
-      function  TypeFlagsAsInt : LongInt;
+      function  TypeFlagsAsInt : C_ULong;
       function  GetMembersStartOffset : Integer; override;
       procedure ModuleReady(Sender : TObject); override;
       procedure ReallocMethods; override;
@@ -2640,22 +2641,22 @@ type
   TPythonThread = class(TThread)
   private
     fThreadState:      PPyThreadState;
-    f_savethreadstate: PPyThreadState;
     fThreadExecMode:   TThreadExecMode;
+  private class threadvar
+    f_savethreadstate: PPyThreadState;
 
-// Do not overwrite Execute! Use ExecuteWithPython instead!
+    // Do not overwrite Execute! Use ExecuteWithPython instead!
     procedure Execute; override;
   protected
     procedure ExecuteWithPython; virtual; abstract;
-
-    procedure Py_Begin_Allow_Threads;
-    procedure Py_End_Allow_Threads;
-// The following procedures are redundant and only for
-// compatibility to the C API documentation.
-    procedure Py_Begin_Block_Threads;
-    procedure Py_Begin_Unblock_Threads;
-
   public
+    class procedure Py_Begin_Allow_Threads;
+    class procedure Py_End_Allow_Threads;
+    // The following procedures are redundant and only for
+    // compatibility to the C API documentation.
+    class procedure Py_Begin_Block_Threads;
+    class procedure Py_Begin_Unblock_Threads;
+
     property ThreadState : PPyThreadState read  fThreadState;
     property ThreadExecMode: TThreadExecMode read fThreadExecMode write fThreadExecMode;
   end;
@@ -2739,6 +2740,8 @@ uses
 (*******************************************************)
 resourcestring
 SPyConvertionError = 'Conversion Error: %s expects a %s Python object';
+SPyExcStopIteration = 'Stop Iteration';
+SPyExcSystemError = 'Unhandled SystemExit exception. Code: %s';
 
 (*******************************************************)
 (**                                                   **)
@@ -2909,17 +2912,29 @@ end;
 (*******************************************************)
 
 procedure TDynamicDll.DoOpenDll(const aDllName : string);
+{$IFDEF MSWINDOWS}
+const
+  LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR = $00000100;
+  LOAD_LIBRARY_DEFAULT_DIRS = $00001000;
+Var
+  ExceptMask: TFPUExceptionMask;
+{$ENDIF}
 begin
   if not IsHandleValid then
   begin
     FDllName := aDllName;
     {$IFDEF MSWINDOWS}
-    FDLLHandle := SafeLoadLibrary(
+    ExceptMask := GetExceptionMask;
+    try
       {$IFDEF FPC}
-      PAnsiChar(AnsiString(GetDllPath+DllName))
+      FDLLHandle := LoadLibraryExA(PAnsiChar(AnsiString(GetDllPath+DllName)),
       {$ELSE}
-      GetDllPath+DllName
-      {$ENDIF});
+      FDLLHandle := LoadLibraryEx(PWideChar(GetDllPath+DllName),
+      {$ENDIF}
+        0, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR or LOAD_LIBRARY_DEFAULT_DIRS);
+    finally
+      SetExceptionMask(ExceptMask);
+    end;
     {$ELSE}
     //Linux: need here RTLD_GLOBAL, so Python can do "import ctypes"
     FDLLHandle := THandle(dlopen(PAnsiChar(AnsiString(GetDllPath+DllName)),
@@ -3354,7 +3369,6 @@ begin
   PyImport_ImportModule     := Import('PyImport_ImportModule');
   PyImport_Import           := Import('PyImport_Import');
   PyImport_ReloadModule     := Import('PyImport_ReloadModule');
-  PyLong_AsLong             := Import('PyLong_AsLong');
   PyList_Append             := Import('PyList_Append');
   PyList_AsTuple            := Import('PyList_AsTuple');
   PyList_GetItem            := Import('PyList_GetItem');
@@ -3809,6 +3823,18 @@ begin
   inherited;
 end;
 
+procedure TPythonTraceback.AddItem(const Context, FileName: string;
+  LineNo: Integer);
+var
+  Item: TTracebackItem;
+begin
+  Item := TTracebackItem.Create;
+  Item.Context := Context;
+  Item.FileName := FileName;
+  Item.LineNo := LineNo;
+  FItems.Add(Item);
+end;
+
 procedure TPythonTraceback.Clear;
 var
   i : Integer;
@@ -3829,7 +3855,7 @@ end;
  * simply use the method CheckError wich will call PyErr_Print,
  * Traceback.Refresh and RaiseError for you.
 }
-procedure TPythonTraceback.Refresh;
+procedure TPythonTraceback.Refresh(pytraceback: PPyObject);
 var
   tb, tb1  : PPyObject;
   obj      : PPyObject;
@@ -3848,7 +3874,9 @@ begin
       limitv := PySys_GetObject('tracebacklimit');
       if Assigned(limitv) and PyLong_Check(limitv) then
         alimit := PyLong_AsLong(limitv);
-      tb := PySys_GetObject('last_traceback');
+      tb := pytraceback;
+      if tb = nil then
+        tb := PySys_GetObject('last_traceback');
       tb1 := tb;
       Py_XIncRef(tb1);
       depth := 0;
@@ -3936,7 +3964,6 @@ var
   i : Integer;
 begin
   inherited;
-  FLock                    := TCriticalSection.Create;
   FInitScript              := TstringList.Create;
   FClients                 := TList.Create;
   FRedirectIO              := True;
@@ -3962,16 +3989,10 @@ begin
   GlobalVars := nil;
   Destroying;
   Finalize;
-{$IFDEF FPC}
-  inherited;
-{$ENDIF}  // Free our objects
   FClients.Free;
   FInitScript.Free;
   FTraceback.Free;
-  FLock.Free;
-{$IFNDEF FPC}
   inherited;
-{$ENDIF}
 end;
 
 procedure TPythonEngine.Finalize;
@@ -4037,16 +4058,6 @@ begin
   FPyDateTime_TZInfoType      := nil;
   FPyDateTime_TimeTZType      := nil;
   FPyDateTime_DateTimeTZType  := nil;
-end;
-
-procedure TPythonEngine.Lock;
-begin
-  FLock.Enter;
-end;
-
-procedure TPythonEngine.Unlock;
-begin
-  FLock.Leave;
 end;
 
 procedure TPythonEngine.AfterLoad;
@@ -4235,6 +4246,18 @@ begin
     if Value and Assigned(PyEval_InitThreads) then
       PyEval_InitThreads;
     FInitThreads := Value;
+  end;
+end;
+
+procedure TPythonEngine.SetIO(InputOutput: TPythonInputOutput);
+begin
+  if InputOutput <> fIO then
+  begin
+    if Assigned(fIO) then
+      fIO.RemoveFreeNotification(Self);
+    fIO := InputOutput;
+    if Assigned(fIO) then
+      fIO.FreeNotification(Self);
   end;
 end;
 
@@ -4447,10 +4470,9 @@ begin
     presult := PyEval_CallObjectWithKeywords(pyfunc,pyargs, nil);
     CheckError(False);
     if presult = nil then
-      begin
-        PyErr_Print;
-        RaiseError;
-      end
+      // should not happen since an exception would have been raised
+      // in that case by CheckError
+      Result := Null
     else
       begin
         try
@@ -5755,14 +5777,32 @@ begin
 end;
 
 procedure TPythonEngine.CheckError(ACatchStopEx : Boolean = False);
-begin
-  if PyErr_Occurred <> nil then
+  procedure ProcessSystemExit;
+  var
+    errtype, errvalue, errtraceback: PPyObject;
+    SErrValue: string;
   begin
-    if ACatchStopEx and (PyErr_GivenExceptionMatches(PyErr_Occurred, PyExc_StopIteration^) <> 0) then
+    PyErr_Fetch(errtype, errvalue, errtraceback);
+    Traceback.Refresh(errtraceback);
+    SErrValue := PyObjectAsString(errvalue);
+    PyErr_Clear;
+    raise EPySystemExit.CreateResFmt(@SPyExcSystemError, [SErrValue]);
+  end;
+
+var
+  PyException: PPyObject;
+begin
+  PyException := PyErr_Occurred;
+  if PyException <> nil then
+  begin
+    if ACatchStopEx and (PyErr_GivenExceptionMatches(PyException, PyExc_StopIteration^) <> 0) then
     begin
       PyErr_Clear;
-      raise EPyStopIteration.Create('Stop iteration');
+      raise EPyStopIteration.CreateRes(@SPyExcStopIteration);
     end
+    else if PyErr_GivenExceptionMatches(PyException, PyExc_SystemExit^) <> 0 then
+    // Special treatment for SystemExit.  Calling PyErr_Print would terminate the process
+      ProcessSystemExit
     else
     begin
       PyErr_Print;
@@ -7527,7 +7567,7 @@ begin
   FDocString.Assign( value );
 end;
 
-function  TPythonType.TypeFlagsAsInt : LongInt;
+function  TPythonType.TypeFlagsAsInt : C_ULong;
 begin
   Result := 0;
   if tpfHeapType in TypeFlags then
@@ -8620,24 +8660,24 @@ begin
 end;
 
 
-procedure TPythonThread.Py_Begin_Allow_Threads;
+class procedure TPythonThread.Py_Begin_Allow_Threads;
 begin
   with GetPythonEngine do
     f_savethreadstate := PyEval_SaveThread;
 end;
 
-procedure TPythonThread.Py_End_Allow_Threads;
+class procedure TPythonThread.Py_End_Allow_Threads;
 begin
   with GetPythonEngine do
-    PyEval_RestoreThread( f_savethreadstate);
+    PyEval_RestoreThread(f_savethreadstate);
 end;
 
-procedure TPythonThread.Py_Begin_Block_Threads;
+class procedure TPythonThread.Py_Begin_Block_Threads;
 begin
   Py_End_Allow_Threads;
 end;
 
-procedure TPythonThread.Py_Begin_Unblock_Threads;
+class procedure TPythonThread.Py_Begin_Unblock_Threads;
 begin
   Py_Begin_Allow_Threads;
 end;
